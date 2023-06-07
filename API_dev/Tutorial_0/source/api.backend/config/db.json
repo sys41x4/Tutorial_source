@@ -1,0 +1,8 @@
+{
+    "service":"MYSQL",
+    "host":"172.17.0.2",
+    "port":3306,
+    "db_name":"user_data",
+    "db_user":"root",
+    "db_pass":"toor"
+}

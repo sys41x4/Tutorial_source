@@ -1,0 +1,5 @@
+requests
+fastapi
+ujson
+uvicorn
+mysql-connector-python

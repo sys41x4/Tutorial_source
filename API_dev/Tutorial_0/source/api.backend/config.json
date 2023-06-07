@@ -1,0 +1,4 @@
+{
+    "fp_server_config":"/etc/test.app/config/server.json",
+    "fp_db_config":"/etc/test.app/config/db.json"
+}
