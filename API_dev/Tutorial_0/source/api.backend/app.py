@@ -75,22 +75,35 @@ def api_info():
     return JSONResponse({"api": {"ver":"0.1.0"}})
 
 @app.get("/api/scrape")
-def scrape_user(scrape_type: str = '', count: Optional[int] = 0, randomize: Optional[bool] = False, action: Optional[str] = ''):
+def scrape_user(
+    scrape_type: str = '', 
+    count: Optional[int] = 0, 
+    randomize: Optional[bool] = False, 
+    action: Optional[str] = '',
+    uid: Optional[str] = '',
+    email: Optional[str] = '',
+    ):
     # scrape_type = user/db/live
     # count >=0
     # action = update/fetch
     # randomize = true/false
+    # uid = <user uid>
+    # email = <user mail>
 
     formated_json = {"type":scrape_type,
                      "count":count,
                      "action":action,
-                     "randomize":randomize
+                     "randomize":randomize,
+                     "uid":uid,
+                     "email":email
                      }
 
     foreign_url = "https://randomuser.me/api/?results="+str(formated_json["count"])
 
     data = {}
     randomize_rows_extended_query = ""
+    uid_rows_extend_query = ""
+    email_rows_extend_query = ""
     if(formated_json["randomize"]): randomize_rows_extended_query = "ORDER BY RAND()"
 
     if (formated_json['type'].upper()=="USER"):
@@ -104,11 +117,17 @@ def scrape_user(scrape_type: str = '', count: Optional[int] = 0, randomize: Opti
                 
                 uid_reference = db_tables[0]
 
+                if(formated_json["uid"]!=''):uid_rows_extend_query = f'{uid_reference}.uid = "{str(formated_json["uid"])}" AND '
+                if(formated_json["email"]!=''):email_rows_extend_query = f'{uid_reference}.email = "{str(formated_json["email"])}" AND '
+                
+
+
                 db_col = [col for table in existing_columns for col in existing_columns[table]['db_col']]
 
                 rows = DB_connector.query_fetch(f"""
                 SELECT * FROM {', '.join(db_tables)}
-                WHERE {'.uid = {uid_reference}.uid AND '.join(db_tables[1::])}.uid = {uid_reference}.uid
+                WHERE  {uid_rows_extend_query} {email_rows_extend_query}
+                {'.uid = {uid_reference}.uid AND '.join(db_tables[1::])}.uid = {uid_reference}.uid
                 {randomize_rows_extended_query}
                 LIMIT """+str(formated_json["count"])+';')
 
@@ -171,11 +190,16 @@ def scrape_user(scrape_type: str = '', count: Optional[int] = 0, randomize: Opti
                 
                 uid_reference = db_tables[0]
 
+                if(formated_json["uid"]!=''):uid_rows_extend_query = f'{uid_reference}.uid = "{str(formated_json["uid"])}" AND '
+                if(formated_json["email"]!=''):email_rows_extend_query = f'{uid_reference}.email = "{str(formated_json["email"])}" AND '
+
+
                 db_col = [col for table in existing_columns for col in existing_columns[table]['db_col']]
 
                 rows = DB_connector.query_fetch(f"""
                 SELECT * FROM {', '.join(db_tables)}
-                WHERE {'.uid = {uid_reference}.uid AND '.join(db_tables[1::])}.uid = {uid_reference}.uid
+                WHERE {uid_rows_extend_query} {email_rows_extend_query}
+                {'.uid = {uid_reference}.uid AND '.join(db_tables[1::])}.uid = {uid_reference}.uid
                 {randomize_rows_extended_query}
                 LIMIT """+str(formated_json["count"])+';')
 

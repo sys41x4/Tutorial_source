@@ -18,9 +18,14 @@
     randomize=0/1 | Optional
     count=>=0 | Optional
     action=fetch/update | Optional
+    uid=<user_uid> | Optional
+    email=<user_mailID> | Optional
 
     These Args can be used together to fetch/modify data using the API endpoints
     
     Example : http://172.16.91.131:8080/api/scrape?scrape_type=user&randomize=1&count=6&action=fetch
               This will url will fetch data of 6 users in random orders from the local connected database
+
+              http://172.16.91.131:8080/api/scrape?scrape_type=user&email=knut.normann@example.com&&count=6&action=fetch
+              This will fetch data of user having email nut.normann@example.com
 ```
