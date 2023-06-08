@@ -62,6 +62,14 @@ DB_connector.connect(config.db["host"], config.db["port"], config.db["db_name"],
 # API Connector
 API = api.api()
 
+object_dict={}
+
+# Add Objects to object_dict
+object_dict.update({'config':config})
+object_dict.update({'DB_connector':DB_connector})
+object_dict.update({'API':API})
+
+
 # Initiate FAST API Service
 app = FastAPI()
 
@@ -82,6 +90,7 @@ def scrape_user(
     action: Optional[str] = '',
     uid: Optional[str] = '',
     email: Optional[str] = '',
+    db_columns: Optional[str] = '',
     ):
     # scrape_type = user/db/live
     # count >=0
@@ -89,14 +98,18 @@ def scrape_user(
     # randomize = true/false
     # uid = <user uid>
     # email = <user mail>
+    # db_columns = [<db_col_0>, <db_col_2> ,...]
 
     formated_json = {"type":scrape_type,
                      "count":count,
                      "action":action,
                      "randomize":randomize,
                      "uid":uid,
-                     "email":email
+                     "email":email,
+                     "db_columns":[str(col).strip() for col in db_columns.split(",")]
                      }
+
+    
 
     foreign_url = "https://randomuser.me/api/?results="+str(formated_json["count"])
 
@@ -104,108 +117,40 @@ def scrape_user(
     randomize_rows_extended_query = ""
     uid_rows_extend_query = ""
     email_rows_extend_query = ""
+
     if(formated_json["randomize"]): randomize_rows_extended_query = "ORDER BY RAND()"
+
+    formated_json.update({"randomize_rows_extended_query":randomize_rows_extended_query})
+    formated_json.update({"uid_rows_extend_query":uid_rows_extend_query})
+    formated_json.update({"email_rows_extend_query":email_rows_extend_query})
+    formated_json.update({"existing_columns":existing_columns})
+    formated_json.update({"foreign_url":foreign_url})
+
 
     if (formated_json['type'].upper()=="USER"):
         # Get data from connected database
         try:
             if(formated_json["action"].upper()=='FETCH'):
-                data.update({"data": []})
-                # json_data={}
-
-                db_tables = tuple(existing_columns.keys())
-                
-                uid_reference = db_tables[0]
-
-                if(formated_json["uid"]!=''):uid_rows_extend_query = f'{uid_reference}.uid = "{str(formated_json["uid"])}" AND '
-                if(formated_json["email"]!=''):email_rows_extend_query = f'{uid_reference}.email = "{str(formated_json["email"])}" AND '
-                
-
-
-                db_col = [col for table in existing_columns for col in existing_columns[table]['db_col']]
-
-                rows = DB_connector.query_fetch(f"""
-                SELECT * FROM {', '.join(db_tables)}
-                WHERE  {uid_rows_extend_query} {email_rows_extend_query}
-                {'.uid = {uid_reference}.uid AND '.join(db_tables[1::])}.uid = {uid_reference}.uid
-                {randomize_rows_extended_query}
-                LIMIT """+str(formated_json["count"])+';')
-
-                df = pd.DataFrame(rows, columns=db_col)
-                # json_data.update(df.to_json(orient='records')
-
-                data["data"] = df.to_dict(orient='records')
+                data.update(API.fetch_user_data(formated_json, object_dict))
             else:
                 data.update({"data":[]})
 
         except Exception as e:
             data.update({"err":str(e)})
 
+        # except KeyboardInterrupt:
+        #     data.update({"err":str('e')})
+
     elif (formated_json['type'].upper()=="DB"):
         try:
         # Update/interact with connected database
             if(formated_json["action"].upper()=='UPDATE'):
 
-                if (formated_json["count"]>0):
-                    # Update db with new Values if count is greater than 0
-                    
-                    df_pre = API.json_normalize(API.get_json_data(foreign_url)["results"])
-
-                    # Get Current Column from the Connected Database
-
-                    
-                    for i in range(len(existing_columns)):
-                        db_table = tuple(existing_columns.keys())[i]
-                        # print(df_pre.columns)
-                        df = df_pre[list(existing_columns[db_table]['remote_api_col'])]
-                        df.columns = existing_columns[db_table]['db_col']
-
-                        for _, row in df.iterrows():
-                            
-                            row = row.astype(str)
-
-                        
-                            # Insert in to user table
-                            
-                            # print(type(row))
-                            
-                            values = ', '.join(['"'+value.replace('\'', '"')+'"' for value in row])
-                            query = f"INSERT INTO {db_table} ({', '.join([col.replace('.', '_') for col in existing_columns[db_table]['db_col']])}) VALUES ({values})"
-
-                            try:
-                                DB_connector.query_exec(query)
-                            except Exception as e:
-                                print(f"Failed to insert data: {e}")
-
-                    DB_connector.commit() # After Structing the data, commit changes to take place
-
-
-                data.update({"data":f"Updated DB With {str(formated_json['count'])} Entries"})
+                data.update(API.update_db_data(formated_json, object_dict))
 
             elif (formated_json["action"].upper()=='FETCH'):
-                data.update({"data": []})
-                # json_data={}
 
-                db_tables = tuple(existing_columns.keys())
-                
-                uid_reference = db_tables[0]
-
-                if(formated_json["uid"]!=''):uid_rows_extend_query = f'{uid_reference}.uid = "{str(formated_json["uid"])}" AND '
-                if(formated_json["email"]!=''):email_rows_extend_query = f'{uid_reference}.email = "{str(formated_json["email"])}" AND '
-
-
-                db_col = [col for table in existing_columns for col in existing_columns[table]['db_col']]
-
-                rows = DB_connector.query_fetch(f"""
-                SELECT * FROM {', '.join(db_tables)}
-                WHERE {uid_rows_extend_query} {email_rows_extend_query}
-                {'.uid = {uid_reference}.uid AND '.join(db_tables[1::])}.uid = {uid_reference}.uid
-                {randomize_rows_extended_query}
-                LIMIT """+str(formated_json["count"])+';')
-
-                df = pd.DataFrame(rows, columns=db_col)
-
-                data["data"] = df.to_dict(orient='records')
+                data.update(API.fetch_db_data(formated_json, object_dict))
                 
             else:
                 data.update({"data":[]})
@@ -214,20 +159,7 @@ def scrape_user(
 
     elif (formated_json['type'].upper()=="LIVE"):
         # Fetch Direct Unformated JSON DATA from Foreign url
-        try:
-            selected_columns = [col for table in existing_columns for col in existing_columns[table]['remote_api_col']]
-            selected_db_columns = [col for table in existing_columns for col in existing_columns[table]['db_col']]
-            
-            df = API.json_normalize(API.get_json_data(foreign_url)["results"])
-            df_filtered = df[selected_columns]
-            df_filtered.columns = selected_db_columns
-            # df_filtered=df.to_dict(orient='records')
-            # print(type(df_filtered))
-            # data.update({"data":df_filtered})
-            data.update({"data":df_filtered.to_dict(orient='records')})
-
-        except Exception as e:
-            data.update({"err":str(e)})
+        data.update(API.fetch_live_data(formated_json, object_dict))
 
     return JSONResponse(data)
 
