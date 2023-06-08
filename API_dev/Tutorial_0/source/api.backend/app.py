@@ -154,8 +154,8 @@ def scrape_user(
                 
             else:
                 data.update({"data":[]})
-        except KeyboardInterrupt:
-            data.update({"err":str('e')})
+        except Exception as e:
+            data.update({"err":str(e)})
 
     elif (formated_json['type'].upper()=="LIVE"):
         # Fetch Direct Unformated JSON DATA from Foreign url
@@ -163,6 +163,34 @@ def scrape_user(
 
     return JSONResponse(data)
 
+@app.get("/api/coordinates")
+def coordinates(
+    origin: str = '', 
+    coordinates: Optional[str] = '',
+    reverse: Optional[bool] = False,
+    ):
+
+    '''
+    origin = (coord_x, coord_y)
+    coordinates = [(coord_x0, coord_y0), (coord_x1, coord_y1), (coord_x2, coord_y2), ...]
+    reverse: 0/1 [0: ascending_order, 1: descending_order]
+    '''
+
+   
+
+    data = {}
+
+    try:
+        formated_json = {"origin":[float(str(val).strip()) for val in origin.split(",")][:2],
+                    "reverse":reverse,
+                    "coordinates":[tuple(map(float, coord.strip("()").split(","))) for coord in coordinates.split("),(")]
+                    }
+
+        data.update(API.sort_coordinates(formated_json["origin"], formated_json["coordinates"], formated_json["reverse"]))
+    except Exception as e:
+        data.update({"err":str(e)})
+
+    return JSONResponse(data)
 
 if __name__ == "__main__":
     uvicorn.run("app:app", reload=config.server["reload"], host=config.server["host"], port=config.server["port"])

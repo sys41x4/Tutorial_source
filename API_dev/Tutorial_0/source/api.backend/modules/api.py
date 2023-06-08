@@ -1,5 +1,7 @@
 import requests
+import math
 import pandas as pd
+
 
 class api:
     def __init__(self,):
@@ -22,6 +24,28 @@ class api:
 
     def json_normalize(self, json_data):
         return pd.json_normalize(json_data)
+
+    def calculate_distance(self, coord, origin):
+        x1, y1 = coord
+        x2, y2 = origin
+        return math.hypot(x2 - x1, y2 - y1)
+
+
+    def sort_coordinates(self, origin_coord=[0, 0], coord_list=[(0,0)], reverse_sort=False):
+        '''
+        sort_by: 0/1 [0: ascending_order, 1: descending_order]
+        '''
+        data={}
+
+        try:
+
+            sorted_coordinates = sorted(coord_list, key=lambda coord: self.calculate_distance(coord, origin_coord), reverse=reverse_sort)
+            data.update({"data":sorted_coordinates})
+
+        except Exception as e:
+            data.update({"err":str(e)})
+
+        return data
 
     def fetch_db_data(self, arg_dict={}, object_dict={}):
 
@@ -101,6 +125,7 @@ class api:
             data.update({"err":str(e)})
 
         return data
+
 
     def update_db_data(self, arg_dict={}, object_dict={}):
         '''

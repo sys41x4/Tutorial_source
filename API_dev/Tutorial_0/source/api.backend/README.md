@@ -14,12 +14,12 @@
 <host>:<port>/api/ : Show current api version
 <host>:<port>/api/scrape : Scrape data from local/remote database
     [GET Args]
-    scrape_type=user/db/live | Mandatory
-    randomize=0/1 | Optional
-    count=>=0 | Optional
-    action=fetch/update | Optional
-    uid=<user_uid> | Optional
-    email=<user_mailID> | Optional
+    scrape_type = user/db/live | Mandatory
+    randomize = 0/1 | Optional
+    count = >=0 | Optional
+    action = fetch/update | Optional
+    uid = <user_uid> | Optional
+    email = <user_mailID> | Optional
     db_columns = [<db_col_0>, <db_col_2> ,...] | Optional
 
     These Args can be used together to fetch/modify data using the API endpoints
@@ -33,4 +33,15 @@
               http://172.16.91.131:8080/api/scrape?scrape_type=user&db_columns=user.uid,user.email&randomize=1&count=3&action=fetch
               This will fetch particularly the column user.uid and user.email, with randomization enabled
               * To get all the data use * as a value of db_columns *
+
+<host>:<port>/api/coordinates : Coordinates calculation
+    origin = x,y | Mandatory
+    coordinates = (x0,y0),(x1,y1),... | Optional
+    reverse = 0/1 | Optional
+
+    These Args can be used together to fetch/modify data using the API endpoints
+
+    Example :
+              http://172.16.91.131:8080/api/coordinates?origin=-69.8246,134.8719&coordinates=(54.6463,168.1213),(-89.2374,62.9537),(-38.6918,53.5376)&reverse=1
+              This will fetch the descending coordinates list having origin -69.8246,134.8719
 ```
